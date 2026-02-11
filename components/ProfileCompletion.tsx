@@ -214,8 +214,13 @@ const ProfileCompletion: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col p-8 md:justify-center items-center">
-      <div className="w-full max-w-md flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-20 -left-20 w-72 h-72 bg-[#1A8CFF]/5 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="w-full max-w-md flex flex-col relative z-10">
         {/* Progress Bar */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-2">

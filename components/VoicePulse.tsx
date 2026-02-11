@@ -15,8 +15,9 @@ const VoicePulse: React.FC<VoicePulseProps> = ({ isActive, level }) => {
     <div className="relative flex items-center justify-center w-64 h-64">
       {/* Outer Glow */}
       <div 
-        className="absolute w-full h-full rounded-full bg-blue-400 blur-3xl transition-all duration-150"
+        className="absolute w-full h-full rounded-full blur-3xl transition-all duration-150"
         style={{ 
+          backgroundColor: '#0066FF',
           transform: `scale(${scale * 1.2})`,
           opacity: isActive ? 0.15 : 0
         }}
@@ -24,15 +25,17 @@ const VoicePulse: React.FC<VoicePulseProps> = ({ isActive, level }) => {
       
       {/* Pulse Rings */}
       <div 
-        className="absolute w-48 h-48 rounded-full border-4 border-blue-500 transition-all duration-300 ease-out"
+        className="absolute w-48 h-48 rounded-full border-4 transition-all duration-300 ease-out"
         style={{ 
+          borderColor: '#0066FF',
           transform: `scale(${scale})`,
           opacity: opacity * 0.2
         }}
       />
       <div 
-        className="absolute w-40 h-40 rounded-full border-2 border-blue-400 transition-all duration-200 ease-out"
+        className="absolute w-40 h-40 rounded-full border-2 transition-all duration-200 ease-out"
         style={{ 
+          borderColor: '#1A8CFF',
           transform: `scale(${scale * 1.1})`,
           opacity: opacity * 0.4
         }}
@@ -42,10 +45,14 @@ const VoicePulse: React.FC<VoicePulseProps> = ({ isActive, level }) => {
       <div 
         className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 ${
           isActive 
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl shadow-blue-200' 
+            ? 'shadow-xl' 
             : 'bg-slate-200'
         }`}
-        style={{ transform: `scale(${scale})` }}
+        style={{ 
+          background: isActive ? 'linear-gradient(135deg, #0066FF 0%, #0047B3 100%)' : undefined,
+          boxShadow: isActive ? '0 20px 25px -5px rgba(0, 102, 255, 0.3)' : undefined,
+          transform: `scale(${scale})` 
+        }}
       >
         <div className="w-16 h-16 flex items-center justify-center">
           <img 

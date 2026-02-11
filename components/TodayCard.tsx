@@ -13,14 +13,14 @@ const TodayCard: React.FC<TodayCardProps> = ({ items, onToggleCheck }) => {
   const dateStr = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', weekday: 'long' }).toUpperCase();
 
   return (
-    <div className="bg-[#C6F35A] rounded-[28px] p-6 mb-6 shadow-sm relative overflow-hidden transition-all hover:shadow-md col-span-1 md:col-span-2">
+    <div className="bg-[#0066FF] rounded-[28px] p-6 mb-6 shadow-sm relative overflow-hidden transition-all hover:shadow-md col-span-1 md:col-span-2">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <span className="text-[10px] font-bold text-slate-700 tracking-wider">{dateStr}</span>
-          <h2 className="text-3xl font-bold text-slate-900 mt-1">Today</h2>
+          <span className="text-[10px] font-bold text-blue-100 tracking-wider uppercase">{dateStr}</span>
+          <h2 className="text-3xl font-bold text-white mt-1">Today</h2>
         </div>
-        <button className="bg-white/40 p-2 rounded-full hover:bg-white/60 transition-colors">
-          <ArrowUpRight className="w-5 h-5 text-slate-900" />
+        <button className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors text-white">
+          <ArrowUpRight className="w-5 h-5" />
         </button>
       </div>
 

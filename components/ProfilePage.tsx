@@ -27,109 +27,100 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6F7] flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-6 flex items-center justify-between bg-white sticky top-0 z-30 shadow-sm">
-        <button onClick={onBack} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h2 className="text-xl font-bold text-slate-900">Profile</h2>
-        <button
-          onClick={handleSignOut}
-          className="p-2 bg-rose-50 rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
-          title="Sign Out"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
-      </header>
+    <div className="min-h-screen bg-[#F5F6F7] relative">
+      {/* Curvy Gradient Header */}
+      <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-br from-[#0066FF] to-[#0047B3] rounded-b-[60px] shadow-lg overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+      </div>
 
-      {/* Profile Content */}
-      <main className="flex-1 px-6 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Avatar Section */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#0066FF] to-[#0047B3] rounded-full flex items-center justify-center text-4xl font-bold text-white mx-auto mb-4">
-              {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">{profile.name || 'User'}</h1>
-            <p className="text-slate-500 text-sm">{profile.email}</p>
-          </div>
-
-          {/* Profile Details */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Personal Information</h3>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Name</p>
-                <p className="text-slate-900 font-semibold">{profile.name}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <Mail className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</p>
-                <p className="text-slate-900 font-semibold">{profile.email}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Age</p>
-                <p className="text-slate-900 font-semibold">{profile.age} years old</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gender</p>
-                <p className="text-slate-900 font-semibold">{profile.gender}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Location</p>
-                <p className="text-slate-900 font-semibold">{profile.location}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 bg-[#F5F6F7] rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status</p>
-                <p className="text-slate-900 font-semibold">{profile.status}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Sign Out Button */}
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-6">
+        {/* Navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <button 
+            onClick={onBack} 
+            className="p-3 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/30 transition-all shadow-sm border border-white/10"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          
           <button
             onClick={handleSignOut}
-            className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center gap-2"
+            className="px-5 py-2.5 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/30 transition-all shadow-sm border border-white/10 flex items-center gap-2 font-bold text-sm"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
             Sign Out
           </button>
         </div>
-      </main>
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-[40px] shadow-xl p-8 md:p-12 mt-10 relative overflow-visible">
+          {/* Avatar - Floating above */}
+          <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">
+            <div className="w-40 h-40 bg-white rounded-full p-2 shadow-2xl">
+              <div className="w-full h-full bg-gradient-to-br from-[#0066FF] to-[#0047B3] rounded-full flex items-center justify-center text-6xl font-bold text-white shadow-inner border-4 border-white">
+                {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center mb-10">
+            <h1 className="text-3xl font-extrabold text-slate-900 mb-2">{profile.name || 'User'}</h1>
+            <p className="text-slate-500 font-medium bg-slate-100 px-4 py-1 rounded-full inline-block text-sm">{profile.email}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-slate-50 p-6 rounded-3xl hover:bg-blue-50 transition-colors group">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform text-[#0066FF]">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Age</span>
+              </div>
+              <p className="text-xl font-bold text-slate-900 pl-14">{profile.age ? `${profile.age} years old` : 'Not specified'}</p>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-3xl hover:bg-blue-50 transition-colors group">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform text-[#0066FF]">
+                  <User className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Gender</span>
+              </div>
+              <p className="text-xl font-bold text-slate-900 pl-14">{profile.gender || 'Not specified'}</p>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-3xl hover:bg-blue-50 transition-colors group">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform text-[#0066FF]">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Location</span>
+              </div>
+              <p className="text-xl font-bold text-slate-900 pl-14">{profile.location || 'Not specified'}</p>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-3xl hover:bg-blue-50 transition-colors group">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform text-[#0066FF]">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Status</span>
+              </div>
+              <p className="text-xl font-bold text-slate-900 pl-14">{profile.status || 'Not specified'}</p>
+            </div>
+          </div>
+
+          <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-between text-slate-400 text-sm">
+             <span>Member since {new Date(profile._creationTime).toLocaleDateString()}</span>
+             <span className="flex items-center gap-2">
+               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+               Active Now
+             </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -285,7 +285,12 @@ const Dashboard: React.FC = () => {
   if (view === 'editor') return <Editor note={editingNote} onSave={handleSaveEditor} onDelete={handleDeleteEditor} onBack={() => setView('dashboard')} />;
 
   return (
-    <div className="min-h-screen max-w-7xl mx-auto flex flex-col bg-[#F5F6F7] relative">
+    <div className="min-h-screen max-w-7xl mx-auto flex flex-col bg-[#F5F6F7] relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-20 -left-20 w-72 h-72 bg-[#1A8CFF]/5 rounded-full blur-3xl pointer-events-none" />
+
       <nav className="px-6 py-8 flex items-center justify-between sticky top-0 bg-[#F5F6F7]/80 backdrop-blur-xl z-30">
         <div className="flex items-center gap-3">
           <img src="/cortexlogo.png" className="w-10 h-10 object-contain" alt="Cortex" />

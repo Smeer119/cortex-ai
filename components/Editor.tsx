@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, ListTodo, FileText, Trash2, Save, X, Plus, Check,
   Image as LucideImage, Mic as LucideMic, StopCircle, Minus,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, CheckCircle2, Circle
 } from 'lucide-react';
 import { Doc, Id } from '../convex/_generated/dataModel';
 import { MemoryType, MemoryStyle } from '../types';
@@ -271,4 +271,4 @@ const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete, onBack }) => {
 };
 
 export default Editor;
-import { CheckCircle2, Circle } from 'lucide-react';
+
