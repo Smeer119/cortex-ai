@@ -95,9 +95,9 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
                 className="flex items-center gap-3 w-full text-left group/item"
               >
                 {check.completed ? (
-                  <CheckCircle2 className="w-5 h-5 text-lime-500 fill-lime-100" />
+                  <CheckCircle2 className="w-5 h-5 text-[#0066FF] fill-[#0066FF]/10" />
                 ) : (
-                  <Circle className="w-5 h-5 text-slate-300 group-hover/item:text-lime-400 transition-colors" />
+                  <Circle className="w-5 h-5 text-slate-300 group-hover/item:text-[#0066FF] transition-colors" />
                 )}
                 <span className={`text-sm ${check.completed ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
                   {check.text}
