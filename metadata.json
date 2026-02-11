@@ -1,0 +1,7 @@
+{
+  "name": "Cortex - The AI Secondary Mind",
+  "description": "A voice-first extension of your memory that listens, categorizes, and organizes your life in real-time using Gemini Live.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
