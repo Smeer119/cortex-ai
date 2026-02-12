@@ -384,7 +384,8 @@ const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete, onBack }) => {
 
                 <div className="w-[1px] h-8 bg-slate-700 mx-2 self-center flex-shrink-0" />
 
-                {['#000000', '#EF4444', '#F97316', '#F59E0B', '#84CC16', '#10B981', '#06B6D4', '#0066FF', '#8B5CF6', '#EC4899'].map((color) => (
+                  {/* Colors */}
+                  {['#000000', '#EF4444', '#F97316', '#F59E0B', '#84CC16', '#10B981', '#06B6D4', '#0066FF', '#8B5CF6', '#EC4899'].map((color) => (
                   <button 
                     key={color} 
                     onMouseDown={(e) => e.preventDefault()}
@@ -407,7 +408,6 @@ const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete, onBack }) => {
                 ))}
               </div>
 
-              {/* Text Formatting */}
               <div className="grid grid-cols-3 gap-2 mb-8">
                 <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleFormat('bold')} className="p-3 bg-white/10 rounded-2xl hover:bg-white/20 font-bold">
                     <Bold className="w-5 h-5 mx-auto" />
@@ -420,7 +420,6 @@ const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete, onBack }) => {
                 </button>
               </div>
 
-              {/* Font Size Slider */}
               <div className="flex items-center gap-4 mb-4">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Size</span>
                   <input 

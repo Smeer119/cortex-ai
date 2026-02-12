@@ -389,12 +389,11 @@ const Dashboard: React.FC = () => {
           <div className="relative">
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
-              className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm shadow-sm flex items-center justify-center text-slate-600 hover:text-[#0066FF] hover:shadow-md transition-all relative"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              {/* <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span> */}
-            </button>
+            className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm shadow-sm flex items-center justify-center text-slate-600 hover:text-[#0066FF] hover:shadow-md transition-all relative"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+          </button>
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
@@ -471,15 +470,11 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Bottom Bar */}
-      {/* Gradient Fade at Bottom */}
       <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#F5F6F7] via-[#F5F6F7]/80 to-transparent pointer-events-none z-30" />
 
-      {/* Floating Bottom Bar */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
         <div className="flex items-center gap-8 bg-[#18181b] backdrop-blur-2xl px-8 py-4 rounded-[32px] shadow-2xl border border-white/5">
           
-          {/* Mic Button - Now Round & Balanced */}
           <button 
             onClick={startVoiceInteraction} 
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group ${
@@ -491,7 +486,6 @@ const Dashboard: React.FC = () => {
             <Mic className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </button>
 
-          {/* Main Action - Center & Prominent */}
           <button 
             onClick={handleCreateManualNote} 
             className="w-16 h-16 rounded-full bg-[#0066FF] flex items-center justify-center hover:bg-[#1A8CFF] active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:-translate-y-1"
@@ -499,7 +493,6 @@ const Dashboard: React.FC = () => {
             <Plus className="w-8 h-8 text-white" />
           </button>
 
-          {/* Profile Button - Round & Balanced */}
           <button 
             onClick={() => setView('profile')} 
             className="w-12 h-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center transition-all hover:ring-2 hover:ring-[#0066FF] hover:-translate-y-1"

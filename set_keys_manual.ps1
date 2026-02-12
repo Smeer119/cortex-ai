@@ -1,8 +1,0 @@
-$keys = @'
------BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDA+fKk...
-(placeholder, will be replaced by the generator)
------END PRIVATE KEY-----
-'@
-npx convex env set JWT_PRIVATE_KEY -- $keys
-npx convex env set CONVEX_AUTH_PRIVATE_KEY -- $keys

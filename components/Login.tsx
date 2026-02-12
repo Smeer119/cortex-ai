@@ -28,7 +28,7 @@ const Login: React.FC = () => {
         await setActive({ session: result.createdSessionId });
       } else {
         // Handle other states like 2FA or email verification if needed
-        console.log("Sign in result:", result);
+
         setError("Account requires further verification.");
       }
     } catch (err: any) {

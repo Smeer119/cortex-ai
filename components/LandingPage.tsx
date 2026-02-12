@@ -29,8 +29,8 @@ const LandingPage: React.FC = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-8 h-8 bg-[#0066FF] rounded-lg flex items-center justify-center text-white">
-              <Brain className="w-5 h-5" />
+            <div className="w-8 h-8  flex items-center justify-center text-white">
+              <img src="./cortexlogo.png" alt="" />
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900">CORTEX AI</span>
           </div>
