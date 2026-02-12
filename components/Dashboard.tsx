@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
 import { 
-  Search, Mic, Plus, X, User as UserIcon
+  Search, Mic, Plus, X, User as UserIcon, Bell
 } from 'lucide-react';
 import { MemoryType, VoiceState } from '../types';
 import { MODEL_NAME, SYSTEM_INSTRUCTION } from '../constants';
@@ -17,28 +17,29 @@ import { api } from '../convex/_generated/api';
 import { Doc, Id } from '../convex/_generated/dataModel';
 
 const Dashboard: React.FC = () => {
-  const { profile } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState<'dashboard' | 'editor' | 'profile'>('dashboard');
+  const { profile } = useAuth();
   
+  // State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [view, setView] = useState<'dashboard' | 'editor' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'all' | 'home' | 'work' | 'ideas'>('all');
+  const [voiceState, setVoiceState] = useState<VoiceState>({ isActive: false, transcript: '', isProcessing: false });
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [voiceLevel, setVoiceLevel] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState<Set<string>>(new Set());
+  const lastCheckRef = useRef<number>(Date.now());
+
   // Convex queries and mutations
   const memories = useQuery(api.memories.getMemories) || [];
+  // Use `any` for createMemory to bypass strict typing if needed, or update types
   const createMemory = useMutation(api.memories.createMemory);
   const updateMemory = useMutation(api.memories.updateMemory);
   const deleteMemory = useMutation(api.memories.deleteMemory);
   const toggleChecklistItem = useMutation(api.memories.toggleChecklistItem);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLiveActive, setIsLiveActive] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [voiceLevel, setVoiceLevel] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'home' | 'work' | 'ideas'>('all');
-  const [voiceState, setVoiceState] = useState<VoiceState>({
-    isListening: false,
-    isThinking: false,
-    transcript: '',
-    lastResponse: '',
-  });
 
   // Editor State
   const [editingNote, setEditingNote] = useState<Partial<Doc<"memories">>>({});
@@ -64,15 +65,24 @@ const Dashboard: React.FC = () => {
     animFrameRef.current = requestAnimationFrame(updateAudioLevels);
   }, []);
 
+  // Keep memories fresh for callbacks
+  const memoriesRef = useRef(memories);
+  useEffect(() => { memoriesRef.current = memories; }, [memories]);
+
   const saveToMemory = useCallback(async (args: any) => {
     const { type, content, title, tags, items, reminder_time } = args;
     try {
+      const processedItems = items?.map((item: any) => ({
+        ...item,
+        id: item.id || Math.random().toString(36).substring(2, 9)
+      }));
+
       await createMemory({
         type: (type as any) || 'note',
         title: title || '',
         content: content || '',
         tags: tags || ['General'],
-        items: items,
+        items: processedItems,
         reminderAt: reminder_time,
       });
       return "Saved to Cortex successfully.";
@@ -81,6 +91,44 @@ const Dashboard: React.FC = () => {
       return "Failed to save to Cortex.";
     }
   }, [createMemory]);
+
+  const appendToMemory = useCallback(async (args: any) => {
+    const { target_title, content, items } = args;
+    const memories = memoriesRef.current;
+    
+    // Fuzzy find best match
+    const target = memories.find(m => 
+      (m.title || '').toLowerCase().includes(target_title.toLowerCase())
+    );
+
+    if (!target) {
+      // Fallback: Create new if not found, but inform user
+      return await saveToMemory({ title: target_title, content, items, type: items ? 'checklist' : 'note' });
+    }
+
+    try {
+      const newContent = content ? (target.content + '\n' + content) : target.content;
+      let newItems = target.items || [];
+      
+      if (items && items.length > 0) {
+        const processedItems = items.map((item: any) => ({
+          ...item,
+          id: Math.random().toString(36).substring(2, 9)
+        }));
+        newItems = [...newItems, ...processedItems];
+      }
+
+      await updateMemory({
+        memoryId: target._id,
+        content: newContent,
+        items: newItems,
+      });
+      return `Updated "${target.title}" successfully.`;
+    } catch (e) {
+      console.error("Failed to append:", e);
+      return "Failed to update memory.";
+    }
+  }, [updateMemory, saveToMemory]);
 
   const stopVoiceInteraction = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -129,9 +177,9 @@ const Dashboard: React.FC = () => {
 
       const saveFn: FunctionDeclaration = {
         name: 'save_to_memory',
+        description: 'Save a new note, task, checklist or reminder.',
         parameters: {
           type: Type.OBJECT,
-          description: 'Save a new note, task, checklist or reminder.',
           properties: {
             type: { type: Type.STRING },
             title: { type: Type.STRING },
@@ -144,12 +192,26 @@ const Dashboard: React.FC = () => {
         },
       };
 
+      const appendFn: FunctionDeclaration = {
+        name: 'append_to_memory',
+        description: 'Add content or items to an existing note/checklist.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            target_title: { type: Type.STRING, description: "Title of the existing note to update" },
+            content: { type: Type.STRING, description: "Text to append" },
+            items: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, completed: { type: Type.BOOLEAN } } } }
+          },
+          required: ['target_title'],
+        },
+      };
+
       const sessionPromise = ai.live.connect({
         model: MODEL_NAME,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
           responseModalities: [Modality.AUDIO],
-          tools: [{ functionDeclarations: [saveFn] }],
+          tools: [{ functionDeclarations: [saveFn, appendFn] }],
           inputAudioTranscription: {},
         },
         callbacks: {
@@ -188,10 +250,13 @@ const Dashboard: React.FC = () => {
             }
             if (msg.toolCall) {
               for (const fc of msg.toolCall.functionCalls) {
+                let result = "Unknown tool.";
                 if (fc.name === 'save_to_memory') {
-                  const result = await saveToMemory(fc.args);
-                  sessionPromise.then(s => s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: { result } } }));
+                   result = await saveToMemory(fc.args);
+                } else if (fc.name === 'append_to_memory') {
+                   result = await appendToMemory(fc.args);
                 }
+                sessionPromise.then(s => s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: { result } } }));
               }
             }
           },
@@ -241,6 +306,7 @@ const Dashboard: React.FC = () => {
           tags: note.tags,
           items: note.items,
           type: note.type,
+          reminderAt: note.reminderAt,
           style: note.style,
         });
       } else {
@@ -250,6 +316,7 @@ const Dashboard: React.FC = () => {
           content: note.content || '',
           tags: note.tags || [],
           items: note.items,
+          reminderAt: note.reminderAt,
           style: note.style,
         });
       }
@@ -271,6 +338,17 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteCard = async (id: string) => {
+      if (confirm("Are you sure you want to delete this note?")) {
+        try {
+          // @ts-ignore
+          await deleteMemory({ memoryId: id });
+        } catch (e) {
+          console.error("Delete error:", e);
+        }
+      }
+  };
+
   const filteredMemories = memories.filter(m => {
     const matchesTab = activeTab === 'all' || m.tags.includes(activeTab.charAt(0).toUpperCase() + activeTab.slice(1));
     const searchQueryLower = searchQuery.toLowerCase();
@@ -285,16 +363,17 @@ const Dashboard: React.FC = () => {
   if (view === 'editor') return <Editor note={editingNote} onSave={handleSaveEditor} onDelete={handleDeleteEditor} onBack={() => setView('dashboard')} />;
 
   return (
-    <div className="min-h-screen max-w-7xl mx-auto flex flex-col bg-[#F5F6F7] relative overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col bg-[#F5F6F7] relative overflow-hidden">
       {/* Background Decor */}
-      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#0066FF]/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-20 -left-20 w-72 h-72 bg-[#1A8CFF]/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Background Decor - Brighter & Starts from Top */}
+      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-100/80 to-transparent pointer-events-none w-full" />
+      <div className="absolute top-32 -right-24 w-96 h-96 bg-[#0066FF]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-40 -left-20 w-72 h-72 bg-[#1A8CFF]/10 rounded-full blur-3xl pointer-events-none" />
 
-      <nav className="px-6 py-8 flex items-center justify-between sticky top-0 bg-[#F5F6F7]/80 backdrop-blur-xl z-30">
-        <div className="flex items-center gap-3">
-          <img src="/cortexlogo.png" className="w-10 h-10 object-contain" alt="Cortex" />
-          <h1 className="text-2xl font-bold tracking-tighter text-slate-900">CORTEX</h1>
+      <nav className="w-full px-6 py-8 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <img src="/cortexlogo.png" className="w-8 h-8 object-contain" alt="Cortex" />
+          <h1 className="text-2xl font-black tracking-tighter text-slate-900 leading-none">CORTEX</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex relative">
@@ -303,16 +382,38 @@ const Dashboard: React.FC = () => {
               placeholder="Search notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white rounded-full py-2.5 px-6 pl-12 text-sm w-64 focus:w-80 transition-all outline-none border border-transparent focus:border-[#0066FF] shadow-sm"
+              className="bg-white/80 backdrop-blur-sm rounded-full py-2.5 px-6 pl-12 text-sm w-64 focus:w-80 transition-all outline-none border border-transparent focus:border-[#0066FF] shadow-sm"
             />
             <Search className="absolute left-4 top-2.5 w-5 h-5 text-slate-400" />
           </div>
-          <button 
-            onClick={() => setView('profile')}
-            className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#0066FF] to-[#0047B3] shadow-sm flex items-center justify-center text-white font-bold text-lg hover:scale-110 transition-transform"
-          >
-            {profile?.name?.charAt(0).toUpperCase() || <UserIcon className="w-5 h-5" />}
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-sm shadow-sm flex items-center justify-center text-slate-600 hover:text-[#0066FF] hover:shadow-md transition-all relative"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {/* <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span> */}
+            </button>
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute top-12 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-slate-900">Notifications</h3>
+                    <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-3">
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <p className="text-slate-500 font-medium">No new notifications</p>
+                    <p className="text-xs text-slate-400 mt-1">You're all caught up!</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </nav>
 
@@ -321,7 +422,11 @@ const Dashboard: React.FC = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all ${activeTab === tab ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all border ${
+              activeTab === tab 
+                ? 'bg-[#0066FF] text-white border-transparent shadow-lg shadow-blue-500/30 scale-105' 
+                : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-[#0066FF] hover:shadow-md'
+            }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
@@ -345,8 +450,9 @@ const Dashboard: React.FC = () => {
                 key={item._id} 
                 item={item as any} 
                 onToggleCheck={(id, idx) => toggleChecklistItem({ memoryId: id as any, itemId: (item as any).items[idx].id })}
-                onDelete={(id) => deleteMemory({ memoryId: id as any })}
+                onDelete={(id) => handleDeleteCard(id)}
                 onClick={handleEditNote}
+                searchQuery={searchQuery}
               />
             ))}
           </div>
@@ -366,18 +472,47 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Floating Bottom Bar */}
-      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40">
-        <div className="bg-slate-900/95 backdrop-blur-md rounded-full p-2 flex items-center gap-2 shadow-2xl border border-slate-800">
-          <button onClick={startVoiceInteraction} className={`p-4 transition-colors ${isConnecting ? 'text-slate-600 animate-pulse' : 'text-white hover:text-[#0066FF]'}`}>
-            <Mic className="w-6 h-6" />
+      {/* Gradient Fade at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#F5F6F7] via-[#F5F6F7]/80 to-transparent pointer-events-none z-30" />
+
+      {/* Floating Bottom Bar */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+        <div className="flex items-center gap-8 bg-[#18181b] backdrop-blur-2xl px-8 py-4 rounded-[32px] shadow-2xl border border-white/5">
+          
+          {/* Mic Button - Now Round & Balanced */}
+          <button 
+            onClick={startVoiceInteraction} 
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group ${
+              isConnecting 
+                ? 'bg-slate-800 text-slate-500 animate-pulse' 
+                : 'bg-slate-800 text-white hover:bg-[#0066FF] hover:-translate-y-1'
+            }`}
+          >
+            <Mic className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </button>
-          <button onClick={handleCreateManualNote} className="w-14 h-14 rounded-full bg-[#0066FF] flex items-center justify-center hover:bg-[#1A8CFF] active:scale-95 transition-all shadow-lg shadow-[#0066FF]/20"><Plus className="w-7 h-7 text-white" /></button>
+
+          {/* Main Action - Center & Prominent */}
+          <button 
+            onClick={handleCreateManualNote} 
+            className="w-16 h-16 rounded-full bg-[#0066FF] flex items-center justify-center hover:bg-[#1A8CFF] active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:-translate-y-1"
+          >
+            <Plus className="w-8 h-8 text-white" />
+          </button>
+
+          {/* Profile Button - Round & Balanced */}
           <button 
             onClick={() => setView('profile')} 
-            className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#0066FF] to-[#0047B3] text-white font-bold flex items-center justify-center border-2 border-slate-800"
+            className="w-12 h-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center transition-all hover:ring-2 hover:ring-[#0066FF] hover:-translate-y-1"
           >
-            {profile?.name?.charAt(0).toUpperCase() || <UserIcon className="w-5 h-5" />}
+            {profile?.name ? (
+               <div className="w-full h-full bg-gradient-to-br from-[#0066FF] to-[#0047B3] flex items-center justify-center text-white font-bold text-lg">
+                  {profile.name.charAt(0).toUpperCase()}
+               </div>
+            ) : (
+               <UserIcon className="w-5 h-5 text-slate-400" />
+            )}
           </button>
+
         </div>
       </div>
 

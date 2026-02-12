@@ -4,13 +4,15 @@ import { MemoryItem } from '../types';
 import { Lock, MoreHorizontal, FileText, ListTodo, Bell, Trash2, Image as ImageIcon, Mic, CheckCircle2, Circle } from 'lucide-react';
 
 interface MemoryCardProps {
-  item: MemoryItem;
+  item: MemoryItem | any;
   onToggleCheck?: (itemId: string, checkIndex: number) => void;
+
   onDelete?: (itemId: string) => void;
   onClick?: (item: MemoryItem) => void;
+  searchQuery?: string;
 }
 
-const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, onClick }) => {
+const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, onClick, searchQuery }) => {
   const isLocked = item.tags.includes('private') || item.tags.includes('locked');
 
   const getIcon = () => {
@@ -20,6 +22,27 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
       case 'checklist': return <ListTodo className="w-5 h-5 text-slate-800" />;
       case 'reminder': return <Bell className="w-5 h-5 text-slate-800" />;
       default: return <FileText className="w-5 h-5 text-slate-800" />;
+    }
+  };
+
+  const highlightText = (text: string) => {
+    if (!searchQuery || !text) return text;
+    const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === searchQuery.toLowerCase() 
+        ? <span key={i} className="bg-yellow-200 text-slate-900 px-1 rounded-sm">{part}</span> 
+        : part
+    );
+  };
+
+  const getHighlightedContent = () => {
+    if (!searchQuery || !item.content) return item.content;
+    // Simple replacement - risky for complex HTML but fine for notes
+    try {
+        const regex = new RegExp(`(${searchQuery})`, 'gi');
+        return item.content.replace(regex, '<mark class="bg-yellow-200 text-slate-900 px-1 rounded-sm">$1</mark>');
+    } catch (e) {
+        return item.content;
     }
   };
 
@@ -42,7 +65,11 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
-            onClick={(e) => { e.stopPropagation(); onDelete?.(item.id); }}
+            onClick={(e) => { 
+                e.stopPropagation(); 
+                // @ts-ignore
+                if(onDelete && item._id) onDelete(item._id); 
+            }}
             className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50"
           >
             <Trash2 className="w-4 h-4" />
@@ -74,16 +101,16 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
               textAlign: item.style?.titleAlign || 'left'
             }}
           >
-            {item.title}
+            {highlightText(item.title)}
           </h3>
         )}
         <div 
-          className="text-slate-600 text-sm line-clamp-3 prose prose-sm overflow-hidden"
+          className="text-slate-600 text-sm line-clamp-4 max-h-60 overflow-hidden text-ellipsis prose prose-sm leading-relaxed [&_img]:w-full [&_img]:h-32 [&_img]:object-cover [&_img]:rounded-xl [&_img]:mb-2 [&_h1]:text-base [&_h2]:text-sm [&_p]:mb-1"
           style={{ 
             fontSize: item.style?.fontSize ? `${parseInt(item.style.fontSize)}px` : 'inherit',
             textAlign: item.style?.contentAlign || 'left'
           }}
-          dangerouslySetInnerHTML={{ __html: item.content }}
+          dangerouslySetInnerHTML={{ __html: getHighlightedContent() }}
         />
         
         {item.type === 'checklist' && item.items && (
@@ -115,7 +142,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
             className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-opacity-20 text-slate-600"
             style={{ backgroundColor: item.style?.highlightColor || '#F0F1F3' }}
           >
-            #{tag}
+            #{highlightText(tag)}
           </span>
         ))}
       </div>

@@ -11,10 +11,15 @@ GUIDELINES:
 4. If a user says "Remind me in X minutes/hours", calculate the exact reminder timestamp.
 
 TOOLS:
-- save_to_memory(type, content, tags, items?, reminder_time?): Use this for everything the user wants to remember.
+- save_to_memory(type, content, tags, items?, reminder_time?): Use this for NEW items.
   - type: 'note', 'task', 'checklist', or 'reminder'
   - items: array of {text, completed} for checklists
   - reminder_time: Unix timestamp (ms) for reminders
+
+- append_to_memory(target_title, content?, items?): Use this when the user says "add to X" or "update X".
+  - target_title: The title of the existing note to update
+  - content: Additional text to append
+  - items: Additional checklist items to add
 `;
 
 export const MEMORY_STORAGE_KEY = 'cortex_memory_data';

@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProfileCompletion from './components/ProfileCompletion';
 import Dashboard from './components/Dashboard';
+import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Signup from './components/Signup';
 
@@ -42,6 +43,28 @@ const AuthPage: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
   );
 };
 
+const Home: React.FC = () => {
+  const { profile, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-16 h-16 border-4 border-[#0066FF] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return <LandingPage />;
+  }
+
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
+
 
 const App: React.FC = () => {
   return (
@@ -53,15 +76,8 @@ const App: React.FC = () => {
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/signup" element={<AuthPage mode="signup" />} />
 
-            {/* Protected Routes */}
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Home Route (Conditional Landing/Dashboard) */}
+            <Route path="/" element={<Home />} />
             
             <Route 
               path="/complete-profile" 
