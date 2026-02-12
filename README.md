@@ -1,5 +1,8 @@
 # Cortex - The AI Secondary Mind
 
+<img width="400" height="300" alt="cortexlogo" src="https://github.com/user-attachments/assets/87e39423-1c99-41fb-a3b9-57fa685aa5ad" />
+
+
 Cortex is a powerful, AI-driven cognitive assistant designed to help you capture, organize, and retrieve your thoughts effortlessly. It acts as a "secondary mind" that listens, understands, and categorizes your ideas, tasks, and memories in real-time.
 
 ## Key Features
