@@ -49,13 +49,17 @@ const Dashboard: React.FC = () => {
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  /* Voice & AI Refs */
   const sessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const aiRef = useRef<GoogleGenAI | null>(null);
+  const isVoiceActiveRef = useRef(false); // Synchronous tracking
 
   const updateAudioLevels = useCallback(() => {
+    if (!isVoiceActiveRef.current) return;
     if (analyserRef.current) {
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
       analyserRef.current.getByteFrequencyData(dataArray);
@@ -70,25 +74,40 @@ const Dashboard: React.FC = () => {
   useEffect(() => { memoriesRef.current = memories; }, [memories]);
 
   const saveToMemory = useCallback(async (args: any) => {
+    console.log("Saving to memory with args:", args); 
     const { type, content, title, tags, items, reminder_time } = args;
     try {
+      // Robust item processing to satisfy Convex schema
       const processedItems = items?.map((item: any) => ({
-        ...item,
-        id: item.id || Math.random().toString(36).substring(2, 9)
+        id: item.id || Math.random().toString(36).substring(2, 9),
+        text: item.text || "New Item",
+        completed: item.completed === true // Ensure boolean, default false
       }));
 
+      const finalType = type && ['note', 'task', 'checklist', 'reminder'].includes(type) ? type : 'note';
+
+      let validTitle = title;
+      if (!validTitle && content) {
+          // Use first few words of content as title if missing
+          validTitle = content.split('\n')[0].substring(0, 40) + (content.length > 40 ? '...' : '');
+      }
+      if (!validTitle) {
+          validTitle = `New Note ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      }
+
       await createMemory({
-        type: (type as any) || 'note',
-        title: title || '',
+        type: finalType,
+        title: validTitle,
         content: content || '',
-        tags: tags || ['General'],
+        tags: tags || ['Voice Note'],
         items: processedItems,
         reminderAt: reminder_time,
       });
+      console.log("Memory saved successfully to Convex");
       return "Saved to Cortex successfully.";
     } catch (e) {
       console.error("Failed to save via voice:", e);
-      return "Failed to save to Cortex.";
+      return "Failed to save to Cortex due to an internal error.";
     }
   }, [createMemory]);
 
@@ -96,13 +115,11 @@ const Dashboard: React.FC = () => {
     const { target_title, content, items } = args;
     const memories = memoriesRef.current;
     
-    // Fuzzy find best match
     const target = memories.find(m => 
       (m.title || '').toLowerCase().includes(target_title.toLowerCase())
     );
 
     if (!target) {
-      // Fallback: Create new if not found, but inform user
       return await saveToMemory({ title: target_title, content, items, type: items ? 'checklist' : 'note' });
     }
 
@@ -112,8 +129,9 @@ const Dashboard: React.FC = () => {
       
       if (items && items.length > 0) {
         const processedItems = items.map((item: any) => ({
-          ...item,
-          id: Math.random().toString(36).substring(2, 9)
+            id: Math.random().toString(36).substring(2, 9),
+            text: item.text || "New Item",
+            completed: item.completed === true 
         }));
         newItems = [...newItems, ...processedItems];
       }
@@ -130,30 +148,54 @@ const Dashboard: React.FC = () => {
     }
   }, [updateMemory, saveToMemory]);
 
-  const stopVoiceInteraction = () => {
+  const stopVoiceInteraction = useCallback(() => {
+    isVoiceActiveRef.current = false;
+    
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    if (sessionRef.current) sessionRef.current.close();
+    
+    if (scriptProcessorRef.current) {
+        try {
+            scriptProcessorRef.current.disconnect();
+        } catch(e) { console.warn("Error disconnecting script processor", e); }
+        scriptProcessorRef.current = null;
+    }
+    
+    if (sessionRef.current) {
+        try {
+            sessionRef.current.close();
+            console.log("Session closed cleanly");
+        } catch(e) { console.warn("Error closing session", e); }
+        sessionRef.current = null;
+    }
+    
     setIsLiveActive(false);
     setVoiceLevel(0);
     setVoiceState(prev => ({ ...prev, isListening: false, isThinking: false }));
-  };
+  }, []);
 
   const startVoiceInteraction = async () => {
+    // Prevent double-start or toggle behavior
+    if (isVoiceActiveRef.current) { 
+        stopVoiceInteraction(); 
+        return; 
+    }
+    
     try {
-      if (isLiveActive) { stopVoiceInteraction(); return; }
-      
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Voice features require a secure connection (HTTPS or localhost).");
+        alert("Voice features require a secure connection.");
         return;
       }
 
       setIsConnecting(true);
+      isVoiceActiveRef.current = true; // Mark active immediately
+      
       if (!aiRef.current) {
         aiRef.current = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
       }
       const ai = aiRef.current;
       
+      // Initialize Audio Contexts
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       }
@@ -161,51 +203,59 @@ const Dashboard: React.FC = () => {
         outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
 
-      if (audioContextRef.current.state === 'suspended') await audioContextRef.current.resume();
-      if (outputAudioContextRef.current.state === 'suspended') await outputAudioContextRef.current.resume();
+      const ac = audioContextRef.current;
+      const out_ac = outputAudioContextRef.current;
+
+      if (ac.state === 'suspended') await ac.resume();
+      if (out_ac.state === 'suspended') await out_ac.resume();
       
+      // Get Stream
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
       });
       streamRef.current = stream;
-      const sourceNode = audioContextRef.current.createMediaStreamSource(stream);
-      const analyser = audioContextRef.current.createAnalyser();
+      
+      // Audio Graph
+      const sourceNode = ac.createMediaStreamSource(stream);
+      const analyser = ac.createAnalyser();
       analyser.fftSize = 256;
       sourceNode.connect(analyser);
       analyserRef.current = analyser;
       updateAudioLevels();
 
+      // Tool Defs
       const saveFn: FunctionDeclaration = {
         name: 'save_to_memory',
         description: 'Save a new note, task, checklist or reminder.',
         parameters: {
-          type: Type.OBJECT,
-          properties: {
-            type: { type: Type.STRING },
-            title: { type: Type.STRING },
-            content: { type: Type.STRING },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            items: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, completed: { type: Type.BOOLEAN } } } },
-            reminder_time: { type: Type.NUMBER }
-          },
-          required: ['type', 'content'],
+            type: Type.OBJECT,
+            properties: {
+              type: { type: Type.STRING },
+              title: { type: Type.STRING },
+              content: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              items: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, completed: { type: Type.BOOLEAN } } } },
+              reminder_time: { type: Type.NUMBER }
+            },
+            required: ['type', 'content'],
         },
       };
 
       const appendFn: FunctionDeclaration = {
         name: 'append_to_memory',
-        description: 'Add content or items to an existing note/checklist.',
+        description: 'Add content or items to an existing note.',
         parameters: {
           type: Type.OBJECT,
           properties: {
-            target_title: { type: Type.STRING, description: "Title of the existing note to update" },
-            content: { type: Type.STRING, description: "Text to append" },
+            target_title: { type: Type.STRING },
+            content: { type: Type.STRING },
             items: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING }, completed: { type: Type.BOOLEAN } } } }
           },
           required: ['target_title'],
         },
       };
 
+      // Connect to Gemini
       const sessionPromise = ai.live.connect({
         model: MODEL_NAME,
         config: {
@@ -216,21 +266,46 @@ const Dashboard: React.FC = () => {
         },
         callbacks: {
           onopen: () => {
+            if (!isVoiceActiveRef.current) return; // Abort if stopped during connection
+            
             setIsLiveActive(true);
             setIsConnecting(false);
             setVoiceState(prev => ({ ...prev, isListening: true }));
-            const scriptProcessor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
+
+            // Input Processor
+            const scriptProcessor = ac.createScriptProcessor(4096, 1, 1);
+            scriptProcessorRef.current = scriptProcessor;
+            
             scriptProcessor.onaudioprocess = (e) => {
+              if (!isVoiceActiveRef.current || !sessionRef.current) return;
+              
               const inputData = e.inputBuffer.getChannelData(0);
-              sessionPromise.then(session => session.sendRealtimeInput({ media: createBlob(inputData) }));
+              const dataBlob = createBlob(inputData);
+              
+              sessionPromise.then(session => {
+                  if (!isVoiceActiveRef.current) return;
+                  try {
+                     session.sendRealtimeInput({ media: dataBlob });
+                  } catch(err: any) { 
+                      // Suppress specific WebSocket closed error to keep console clean
+                      if (!err.message?.includes("CLOSING or CLOSED")) {
+                          console.warn("Audio send error:", err);
+                      }
+                  }
+              });
             };
+            
             sourceNode.connect(scriptProcessor);
-            scriptProcessor.connect(audioContextRef.current!.destination);
+            scriptProcessor.connect(ac.destination);
           },
           onmessage: async (msg: LiveServerMessage) => {
+            if (!isVoiceActiveRef.current) return;
+            
+            // Transcription
             if (msg.serverContent?.inputTranscription) {
               setVoiceState(prev => ({ ...prev, transcript: msg.serverContent!.inputTranscription!.text }));
             }
+            // Audio Output
             const audioData = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (audioData) {
               const ctx = outputAudioContextRef.current!;
@@ -243,20 +318,35 @@ const Dashboard: React.FC = () => {
               nextStartTimeRef.current += buffer.duration;
               sourcesRef.current.add(source);
             }
+            // Interruption
             if (msg.serverContent?.interrupted) {
               sourcesRef.current.forEach(s => s.stop());
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
+            // Tools
             if (msg.toolCall) {
               for (const fc of msg.toolCall.functionCalls) {
                 let result = "Unknown tool.";
-                if (fc.name === 'save_to_memory') {
-                   result = await saveToMemory(fc.args);
-                } else if (fc.name === 'append_to_memory') {
-                   result = await appendToMemory(fc.args);
+                try {
+                  console.log("Calling tool:", fc.name);
+                  if (fc.name === 'save_to_memory') {
+                     result = await saveToMemory(fc.args);
+                  } else if (fc.name === 'append_to_memory') {
+                     result = await appendToMemory(fc.args);
+                  }
+                  
+                  // Send response if still active
+                  if (isVoiceActiveRef.current) {
+                      sessionPromise.then(s => {
+                          try {
+                            s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: { result } } });
+                          } catch(e) { console.warn("Failed sending tool response", e); }
+                      });
+                  }
+                } catch (e) {
+                  console.error("Tool execution failed:", e);
                 }
-                sessionPromise.then(s => s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: { result } } }));
               }
             }
           },
@@ -265,13 +355,23 @@ const Dashboard: React.FC = () => {
             stopVoiceInteraction();
             setIsConnecting(false);
           },
-          onclose: () => {
+          onclose: (e) => {
+            console.log("Voice Close:", e);
             stopVoiceInteraction();
             setIsConnecting(false);
           }
         }
       });
-      sessionRef.current = await sessionPromise;
+      
+      const session = await sessionPromise;
+      if (!isVoiceActiveRef.current) {
+          // If stopped while connecting
+          session.close();
+          sessionRef.current = null;
+          return;
+      }
+      sessionRef.current = session;
+      
     } catch (err) { 
       console.error("Start Voice Error:", err);
       stopVoiceInteraction(); 

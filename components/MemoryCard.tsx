@@ -5,7 +5,7 @@ import { Lock, MoreHorizontal, FileText, ListTodo, Bell, Trash2, Image as ImageI
 
 interface MemoryCardProps {
   item: MemoryItem | any;
-  onToggleCheck?: (itemId: string, checkIndex: number) => void;
+  onToggleCheck?: (memoryId: any, itemId: string) => void;
 
   onDelete?: (itemId: string) => void;
   onClick?: (item: MemoryItem) => void;
@@ -13,7 +13,7 @@ interface MemoryCardProps {
 }
 
 const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, onClick, searchQuery }) => {
-  const isLocked = item.tags.includes('private') || item.tags.includes('locked');
+  const isLocked = item.tags?.includes('private') || item.tags?.includes('locked');
 
   const getIcon = () => {
     if (isLocked) return <Lock className="w-5 h-5 text-slate-400" />;
@@ -27,17 +27,18 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
 
   const highlightText = (text: string) => {
     if (!searchQuery || !text) return text;
-    const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
-    return parts.map((part, i) => 
-      part.toLowerCase() === searchQuery.toLowerCase() 
-        ? <span key={i} className="bg-yellow-200 text-slate-900 px-1 rounded-sm">{part}</span> 
-        : part
-    );
+    try {
+        const parts = text.toString().split(new RegExp(`(${searchQuery})`, 'gi'));
+        return parts.map((part, i) => 
+        part.toLowerCase() === searchQuery.toLowerCase() 
+            ? <span key={i} className="bg-yellow-200 text-slate-900 px-1 rounded-sm">{part}</span> 
+            : part
+        );
+    } catch(e) { return text; }
   };
 
   const getHighlightedContent = () => {
     if (!searchQuery || !item.content) return item.content;
-    // Simple replacement - risky for complex HTML but fine for notes
     try {
         const regex = new RegExp(`(${searchQuery})`, 'gi');
         return item.content.replace(regex, '<mark class="bg-yellow-200 text-slate-900 px-1 rounded-sm">$1</mark>');
@@ -55,13 +56,13 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
   return (
     <div 
       onClick={() => onClick?.(item)}
-      className="rounded-[24px] p-5 mb-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group relative border border-transparent hover:border-slate-100 cursor-pointer overflow-hidden"
+      className="rounded-[24px] p-5 mb-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group relative border border-transparent hover:border-slate-100 cursor-pointer overflow-hidden border-slate-100/50 bg-white"
       style={cardStyle}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-2">
           {getIcon()}
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.tags[0] || 'Note'}</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.tags?.[0] || 'Note'}</span>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
@@ -70,12 +71,9 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
                 // @ts-ignore
                 if(onDelete && item._id) onDelete(item._id); 
             }}
-            className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50"
+            className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-          </button>
-          <button className="p-1.5 text-slate-300 hover:text-slate-500 rounded-lg hover:bg-slate-50">
-            <MoreHorizontal className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -105,7 +103,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
           </h3>
         )}
         <div 
-          className="text-slate-600 text-sm line-clamp-4 max-h-60 overflow-hidden text-ellipsis prose prose-sm leading-relaxed [&_img]:w-full [&_img]:h-32 [&_img]:object-cover [&_img]:rounded-xl [&_img]:mb-2 [&_h1]:text-base [&_h2]:text-sm [&_p]:mb-1"
+          className="text-slate-600 text-sm line-clamp-4 max-h-60 overflow-hidden text-ellipsis prose prose-sm leading-relaxed"
           style={{ 
             fontSize: item.style?.fontSize ? `${parseInt(item.style.fontSize)}px` : 'inherit',
             textAlign: item.style?.contentAlign || 'left'
@@ -115,11 +113,11 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
         
         {item.type === 'checklist' && item.items && (
           <div className="space-y-3 mt-4">
-            {item.items.slice(0, 3).map((check, idx) => (
+            {item.items.slice(0, 3).map((check: any, idx: number) => (
               <button 
-                key={check.id} 
-                onClick={(e) => { e.stopPropagation(); onToggleCheck?.(item.id, idx); }}
-                className="flex items-center gap-3 w-full text-left group/item"
+                key={check.id || idx} 
+                onClick={(e) => { e.stopPropagation(); onToggleCheck?.(item._id, check.id); }}
+                className="flex items-center gap-3 w-full text-left group/item hover:bg-slate-50 p-1 rounded-lg transition-colors -ml-1"
               >
                 {check.completed ? (
                   <CheckCircle2 className="w-5 h-5 text-[#0066FF] fill-[#0066FF]/10" />
@@ -131,16 +129,21 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ item, onToggleCheck, onDelete, 
                 </span>
               </button>
             ))}
+            {item.items.length > 3 && (
+                <div className="text-xs text-slate-400 font-medium pl-9">
+                    + {item.items.length - 3} more items
+                </div>
+            )}
           </div>
         )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {item.tags.map(tag => (
+        {item.tags?.map((tag: string) => (
           <span 
             key={tag} 
-            className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-opacity-20 text-slate-600"
-            style={{ backgroundColor: item.style?.highlightColor || '#F0F1F3' }}
+            className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-opacity-20 text-slate-600 bg-slate-100"
+            style={{ backgroundColor: item.style?.highlightColor || '#F1F5F9' }}
           >
             #{highlightText(tag)}
           </span>
